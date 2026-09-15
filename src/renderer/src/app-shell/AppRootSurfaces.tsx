@@ -82,9 +82,7 @@ const FloatingTerminalPanel = lazy(() =>
     default: module.FloatingTerminalPanel
   }))
 )
-// Why: lazy so the WebP asset + overlay module aren't fetched unless the experimental flag is on.
 const PetOverlay = lazy(() => import('../components/pet/PetOverlay'))
-// Why: lazy so onboarding's step modules + assets aren't fetched for users past first-launch.
 const OnboardingFlow = lazy(() => import('../components/onboarding/OnboardingFlow'))
 
 type BoundaryProps = {
@@ -121,10 +119,6 @@ function shouldMountUpdateCardForStatus(status: UpdateStatus): boolean {
   return true
 }
 
-/**
- * Every overlay and modal hosted at the App root, in a fixed sibling order so stacking stays
- * stable. Each is gated so its chunk is only fetched once the surface can actually appear.
- */
 export function AppRootSurfaces(props: {
   floatingWorkspace: FloatingWorkspacePanelState
   onboardingGate: OnboardingGate
@@ -133,8 +127,6 @@ export function AppRootSurfaces(props: {
   const { mountedLazyModalIds, shouldMountAddRepoDialog } = useLazyModalMounts()
   const activeView = useAppStore((s) => s.activeView)
   const activeModal = useAppStore((s) => s.activeModal)
-  // Keep this always-mounted surface subscribed only to the settings fields it reads. A
-  // settings object replacement for an unrelated preference should not rerender every overlay.
   const voiceEnabled = useAppStore(selectAppRootSurfaceVoiceEnabled)
   const petEnabled = useAppStore(selectAppRootSurfacePetEnabled)
   const telemetryOptedIn = useAppStore(selectAppRootSurfaceTelemetryOptedIn)
@@ -191,7 +183,6 @@ export function AppRootSurfaces(props: {
           </OverlayBoundary>
         </Suspense>
       ) : null}
-      {/* Why: keep in the entry bundle so a stale/corrupt lazy chunk can't strand users at Create. */}
       {activeModal === 'new-workspace-composer' ? (
         <ModalBoundary boundaryId="modal.new-workspace-composer" resetKey>
           <NewWorkspaceComposerModal />
@@ -203,7 +194,6 @@ export function AppRootSurfaces(props: {
             <AddRepoDialog />
           </ModalBoundary>
         ) : null}
-        {/* Why: Settings can start Add Project without Sidebar, so its handoff dialogs must share the root host. */}
         {activeModal === 'confirm-non-git-folder' ? (
           <ModalBoundary boundaryId="modal.confirm-non-git-folder" resetKey>
             <NonGitFolderDialog />
@@ -220,7 +210,6 @@ export function AppRootSurfaces(props: {
           </ModalBoundary>
         ) : null}
       </Suspense>
-      {/* Why: root overlays can render Radix <Tooltip>s; keep inside the shared provider so lazy surfaces mount from any entry point. */}
       <Suspense fallback={null}>
         {mountedLazyModalIds.has('workspace-cleanup') ? (
           <ModalBoundary
@@ -271,7 +260,6 @@ export function AppRootSurfaces(props: {
           <ContextualTourOverlay />
         </Suspense>
       ) : null}
-      {/* Why: mount only after UI hydration, else a hidden pet flashes while the store still holds default visibility. */}
       {renderPetOverlay ? (
         <Suspense fallback={null}>
           <OverlayBoundary boundaryId="overlay.pet" resetKey={petVisible}>
@@ -300,7 +288,6 @@ export function AppRootSurfaces(props: {
         <StarNagToastHost />
       </OverlayBoundary>
       <StarNagAgentValueMomentObserver />
-      {/* Why: mount at App root to render once per session; internal cohort gate limits it to pre-telemetry users — see telemetry-plan.md §First-launch experience. */}
       <OverlayBoundary boundaryId="overlay.telemetry-first-launch" resetKey={telemetryOptedIn}>
         <TelemetryFirstLaunchSurface />
       </OverlayBoundary>
@@ -371,7 +358,6 @@ export function AppRootSurfaces(props: {
       <OverlayBoundary boundaryId="overlay.recent-tab-switcher" resetKey={activeView}>
         <RecentTabSwitcher />
       </OverlayBoundary>
-      {/* Why: hosts a live terminal pane needing the link-routing preference context; mounting outside crashes it. */}
       <OverlayBoundary boundaryId="overlay.skill-freshness-update-dialog">
         <SkillFreshnessUpdateDialog />
       </OverlayBoundary>
